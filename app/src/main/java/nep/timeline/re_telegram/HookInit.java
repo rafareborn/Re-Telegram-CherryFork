@@ -6,7 +6,7 @@ import java.util.List;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XC_MethodReplacement;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import nep.timeline.re_telegram.application.ApplicationLoaderHook;
@@ -87,18 +87,32 @@ public class HookInit implements IXposedHookLoadPackage {
             // UnlockedNoPremiumAccountsLimit.init(classLoader);
 
             if (ClientChecker.check(ClientChecker.ClientType.Cherrygram)) {
-                Class<?> checker = XposedHelpers.findClassIfExists("org.telegram.tgnet.ConnectionsManagerImpl", classLoader);
-                XposedHelpers.findAndHookMethod(checker, "nfhpo4yruoi1je3", XC_MethodReplacement.DO_NOTHING);
-                XposedHelpers.findAndHookMethod(checker, "g45ytgt513", XC_MethodReplacement.DO_NOTHING);
+                try {
+                    Class<?> configHelper = XposedHelpers.findClassIfExists(
+                            "uz.unnarsx.cherrygram.core.helpers.FirebaseRemoteConfigHelper", classLoader
+                    );
 
-                Class<?> targetClass = XposedHelpers.findClassIfExists("uz.unnarsx.cherrygram.core.helpers.FirebaseRemoteConfigHelper", classLoader);
-                if (targetClass != null) {
-                    XposedHelpers.findAndHookMethod(targetClass, "toggleReTgCheck", Boolean.class, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) {
-                            param.args[0] = false;
-                        }
-                    });
+                    if (configHelper == null) {
+                        Utils.log("Cherrygram: FirebaseRemoteConfigHelper not found. Skipping hook.");
+                        return;
+                    }
+
+                    XposedBridge.hookMethod(
+                            XposedHelpers.findMethodBestMatch(configHelper, "toggleReTgCheck", Boolean.class),
+                            new XC_MethodHook() {
+                                @Override
+                                protected void beforeHookedMethod(MethodHookParam param) {
+                                    param.args[0] = false;
+                                    Utils.log("Cherrygram: Remote config check disabled.");
+                                }
+                            }
+                    );
+
+                } catch (XposedHelpers.ClassNotFoundError | NoSuchMethodError e) {
+                    Utils.log("Cherrygram: Hook failed - " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                } catch (Throwable t) {
+                    Utils.log("Cherrygram: Unexpected error while applying hooks.");
+                    Utils.log(t);
                 }
             }
 
