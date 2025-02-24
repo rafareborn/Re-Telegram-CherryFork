@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
+import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -89,6 +90,16 @@ public class HookInit implements IXposedHookLoadPackage {
                 Class<?> checker = XposedHelpers.findClassIfExists("org.telegram.tgnet.ConnectionsManagerImpl", classLoader);
                 XposedHelpers.findAndHookMethod(checker, "nfhpo4yruoi1je3", XC_MethodReplacement.DO_NOTHING);
                 XposedHelpers.findAndHookMethod(checker, "g45ytgt513", XC_MethodReplacement.DO_NOTHING);
+
+                Class<?> targetClass = XposedHelpers.findClassIfExists("uz.unnarsx.cherrygram.core.helpers.FirebaseRemoteConfigHelper", classLoader);
+                if (targetClass != null) {
+                    XposedHelpers.findAndHookMethod(targetClass, "toggleReTgCheck", Boolean.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) {
+                            param.args[0] = false;
+                        }
+                    });
+                }
             }
 
             if (!onlyNeedAR(lpparam.packageName))
